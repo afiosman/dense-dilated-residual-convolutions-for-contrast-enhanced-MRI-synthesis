@@ -1,5 +1,242 @@
-cwrvrg
+# Deep Learning for Contrast-Enhanced T1 MR Image Synthesis
+# @author: Alexander F.I. Osman, April 2023
 
-g
+"""
+PART II: TESTING THE MODEL PERFORMANCE
 
-g
+This code demonstrates a 3D Dense-Dlated Res U-Net architecture for contrast-enhanced MR image
+synthesis from contrast-free image.
+
+Dataset: BRATS'2021 challenge dataset.
+
+The testing process goes through the following steps:
+1. Make predictions on a test dataset
+2. Evaluate the model performance (SSIM, MAE, etc.)
+"""
+
+###############################################################################
+# 1. MAKE PREDICTIONS #########################################################
+###############################################################################
+
+import numpy as np
+from keras.models import load_model
+import matplotlib
+matplotlib.use('TkAgg', force=True)
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+import os
+import random
+import os
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+
+
+# Load the processed and saved test dataset
+test_img_t1_t2_fl_dir = "E:/Datasets/BRATS_2021_Challenge/train_val_test_datasets_comb/test/images_t1_t2_fl/"
+test_img_t1ce_dir = "E:/Datasets/BRATS_2021_Challenge/train_val_test_datasets_comb/test/images_t1ce/"
+
+test_img_t1_t2_fl_list = os.listdir(test_img_t1_t2_fl_dir)
+test_img_t1ce_list = os.listdir(test_img_t1ce_dir)
+
+# Load the trained model
+new_model = load_model('saved_model/MR_CE_Synth_3D_plain_unet_customLoss_ep_18.hdf5', compile=False)
+#new_model = load_model('saved_model/MR_CE_Synth_3D_dense_dilated_res_unet_customLoss_ep_24.hdf5', compile=False)
+#new_model = load_model('saved_model/MR_CE_Synth_3D_dense_dilated_res_unet_customLoss_ep_42_comb.hdf5', compile=False)
+
+# Check the model's architecture
+new_model.summary()
+
+# Make predictions on all test set
+#### Multi-input
+test_t1, test_t2, test_fl = [], [], []
+test_pred = []
+test_real = []
+for item in tqdm(range(0, len(os.listdir(test_img_t1_t2_fl_dir))), desc='Predicting'):
+    test_img_t1_t2_fl = np.load(test_img_t1_t2_fl_dir + test_img_t1_t2_fl_list[item])
+    test_img_t1ce = np.load(test_img_t1ce_dir + test_img_t1ce_list[item])
+    test_img_t1_t2_fl = np.expand_dims(test_img_t1_t2_fl, axis=0)
+    prediction = new_model.predict(test_img_t1_t2_fl, verbose=0)
+    prediction = np.absolute(prediction[0,:,:,:,0])   # strip" the last dim.
+    test_img_t1 = test_img_t1_t2_fl[0,:,:,:,0]
+    test_img_t2 = test_img_t1_t2_fl[0,:,:,:,1]
+    test_img_fl = test_img_t1_t2_fl[0,:,:,:,2]
+    ground_truth = test_img_t1ce[:,:,:,0]
+    test_pred.append(prediction)
+    test_real.append(ground_truth)
+    test_t1.append(test_img_t1)
+    test_t2.append(test_img_t2)
+    test_fl.append(test_img_fl)
+test_t1 = np.array(test_t1)
+test_t2 = np.array(test_t2)
+test_fl = np.array(test_fl)
+test_pred = np.array(test_pred)
+test_real = np.array(test_real)
+
+
+#### Single-input
+test_t1, test_t2, test_fl = [], [], []
+test_pred = []
+test_real = []
+for item in tqdm(range(0, len(os.listdir(test_img_t1_t2_fl_dir))), desc='Predicting'):
+    test_img_t1_t2_fl = np.load(test_img_t1_t2_fl_dir + test_img_t1_t2_fl_list[item])
+    test_img_t1ce = np.load(test_img_t1ce_dir + test_img_t1ce_list[item])
+    test_img_t1_t2_fl = np.expand_dims(test_img_t1_t2_fl, axis=0)
+    prediction = new_model.predict(test_img_t1_t2_fl[:,:,:,:,0], verbose=0)
+    prediction = np.absolute(prediction[0,:,:,:,0])   # strip" the last dim.
+    test_img_t1 = test_img_t1_t2_fl[0,:,:,:,0]
+    test_img_t2 = test_img_t1_t2_fl[0,:,:,:,1]
+    test_img_fl = test_img_t1_t2_fl[0,:,:,:,2]
+    ground_truth = test_img_t1ce[:,:,:,0]
+    test_pred.append(prediction)
+    test_real.append(ground_truth)
+    test_t1.append(test_img_t1)
+    test_t2.append(test_img_t2)
+    test_fl.append(test_img_fl)
+test_t1 = np.array(test_t1)
+test_t2 = np.array(test_t2)
+test_fl = np.array(test_fl)
+test_pred = np.array(test_pred)
+test_real = np.array(test_real)
+
+
+# Plot 
+plt.figure(figsize=(14, 8))
+grid = plt.GridSpec(6, 6, wspace=.15, hspace=.15)
+pt_id1 = 246
+slice_numb1 = 66
+exec (f"plt.subplot(grid{[0]})")
+plt.imshow(test_t1[pt_id1,:,:,slice_numb1], cmap='gray')
+plt.colorbar(), plt.title('T1 image'), plt.axis('tight'), plt.axis('off')
+exec (f"plt.subplot(grid{[1]})")
+plt.imshow(test_t2[pt_id1,:,:,slice_numb1], cmap='gray')
+plt.colorbar(), plt.title('T2 image'), plt.axis('tight'), plt.axis('off')
+exec (f"plt.subplot(grid{[2]})")
+plt.imshow(test_fl[pt_id1,:,:,slice_numb1], cmap='gray')
+plt.colorbar(), plt.title('FLAIR image'), plt.axis('tight'), plt.axis('off')
+exec (f"plt.subplot(grid{[3]})")
+plt.imshow(test_pred[pt_id1,:,:,slice_numb1], cmap='gray')
+plt.colorbar(), plt.title('T1ce image (pred)'), plt.axis('tight'), plt.axis('off')
+exec (f"plt.subplot(grid{[4]})")
+plt.imshow(test_real[pt_id1,:,:,slice_numb1], cmap='gray')
+plt.colorbar(), plt.title('T1ce image (real)'), plt.axis('tight'), plt.axis('off')
+exec (f"plt.subplot(grid{[5]})")
+plt.imshow(abs(test_real[pt_id1,:,:,slice_numb1] - test_pred[pt_id1,:,:,slice_numb1]), cmap='gray')
+plt.colorbar(), plt.title('residual'), plt.axis('tight'), plt.axis('off')
+
+
+###############################################################################
+# 2. EVALUATE THE MODEL PERFORMANCE  ##########################################
+###############################################################################
+
+import numpy as np
+from skimage.metrics import peak_signal_noise_ratio, structural_similarity, hausdorff_distance, \
+    mean_squared_error, normalized_mutual_information, normalized_root_mse
+from tqdm import tqdm
+import matplotlib
+matplotlib.use('TkAgg', force=True)
+import matplotlib.pyplot as plt
+
+
+# Compute the SSIM, MAE, MSE, PSNR between two images.
+psnr = np.zeros(test_pred.shape[0] * test_pred.shape[3]).astype('float32')
+ssim = np.zeros(test_pred.shape[0] * test_pred.shape[3]).astype('float32')
+mae = np.zeros(test_pred.shape[0] * test_pred.shape[3]).astype('float32')
+mse = np.zeros(test_pred.shape[0] * test_pred.shape[3]).astype('float32')
+hdd = np.zeros(test_pred.shape[0] * test_pred.shape[3]).astype('float32')
+nmi = np.zeros(test_pred.shape[0] * test_pred.shape[3]).astype('float32')
+nrmse = np.zeros(test_pred.shape[0] * test_pred.shape[3]).astype('float32')
+
+for item in tqdm(range(len(test_pred)), desc='Computing eval. metrics'):
+    pred = test_pred[item]
+    real = test_real[item]
+    for j in range(len(pred)):
+        psnr[j+(item*128)] = np.array(peak_signal_noise_ratio(real[:,:,j], pred[:,:,j], data_range=None))
+        ssim_val, ssim_map = structural_similarity(real[:,:,j], pred[:,:,j], data_range=1, full=True)
+        ssim_val = np.array(ssim_val)
+        ssim[j+(item*128)] = ssim_val
+        mae[j+(item*128)] = abs(real[:,:,j] - pred[:,:,j]).mean()
+        mse[j+(item*128)] = mean_squared_error(real[:,:,j], pred[:,:,j])
+        hdd[j+(item*128)] = hausdorff_distance(real[:,:,j], pred[:,:,j])
+        nmi[j+(item*128)] = normalized_mutual_information(real[:,:,j], pred[:,:,j])
+        nrmse[j+(item*128)] = normalized_root_mse(real[:,:,j], pred[:,:,j])
+
+psnr = psnr[np.logical_not(np.isnan(psnr))]
+psnr = psnr[np.isfinite(psnr)]
+mean_psnr, std_psnr = np.mean(psnr), np.std(psnr)
+print("PSNR (dB) =", np.round(mean_psnr, 4), "±", np.round(std_psnr, 4))
+ssim = ssim[np.logical_not(np.isnan(ssim))]
+ssim = ssim[np.isfinite(ssim)]
+mean_ssim, std_ssim = np.mean(ssim), np.std(ssim)
+print("SSIM =", np.round(mean_ssim, 4), "±", np.round(std_ssim, 4))
+mae = mae[np.logical_not(np.isnan(mae))]
+mae = mae[np.isfinite(mae)]
+mean_mae, std_mae = np.mean(mae), np.std(mae)
+print("MAE =", np.round(mean_mae, 4), "±", np.round(std_mae, 4))
+mse = mse[np.logical_not(np.isnan(mse))]
+mse = mse[np.isfinite(mse)]
+mean_mse, std_mse = np.mean(mse), np.std(mse)
+print("MSE =", np.round(mean_mse, 4), "±", np.round(std_mse, 4))
+hdd = hdd[np.logical_not(np.isnan(hdd))]
+hdd = hdd[np.isfinite(hdd)]
+mean_hdd, std_hdd = np.mean(hdd), np.std(hdd)
+print("HDD =", np.round(mean_hdd, 4), "±", np.round(std_hdd, 4))
+nmi = nmi[np.logical_not(np.isnan(nmi))]
+nmi = nmi[np.isfinite(nmi)]
+mean_nmi, std_nmi = np.mean(nmi), np.std(nmi)
+print("NMI =", np.round(mean_nmi, 4), "±", np.round(std_nmi, 4))
+nrmse = nrmse[np.logical_not(np.isnan(nrmse))]
+nrmse = nmi[np.isfinite(nrmse)]
+mean_nrmse, std_nrmse = np.mean(nrmse), np.std(nrmse)
+print("NRMSE =", np.round(mean_nrmse, 4), "±", np.round(std_nrmse, 4))
+
+# Plot
+pt_id = random.randint(0, test_pred.shape[0]-1)
+slice_numb = random.randint(0, test_pred.shape[3]-1)
+plt.figure(figsize=(12, 8))
+grid = plt.GridSpec(2, 5, wspace=.15, hspace=.15)
+exec (f"plt.subplot(grid{[0]})")
+plt.imshow(test_t1[pt_id,:,:,slice_numb], cmap='gray')
+plt.colorbar(), plt.title('T1 image'), plt.axis('tight'), plt.axis('off')
+exec (f"plt.subplot(grid{[1]})")
+plt.imshow(test_real[pt_id,:,:,slice_numb], cmap='gray')
+plt.colorbar(), plt.title('T1ce image (real)'), plt.axis('tight'), plt.axis('off')
+exec (f"plt.subplot(grid{[2]})")
+plt.imshow(test_pred[pt_id,:,:,slice_numb], cmap='gray')
+plt.colorbar(), plt.title('T1ce image (pred)'), plt.axis('tight'), plt.axis('off')
+exec (f"plt.subplot(grid{[3]})")
+residual = test_real[pt_id, :,:,slice_numb] - test_pred[pt_id,:,:,slice_numb]
+plt.imshow(residual, cmap='gray')
+plt.colorbar(), plt.title('difference map'), plt.axis('tight'), plt.axis('off')
+exec (f"plt.subplot(grid{[4]})")
+ssim = structural_similarity(test_real[pt_id,:,:,slice_numb], test_pred[pt_id,:,:,slice_numb], data_range=1, full=True)
+print("SSIM val =", np.round(ssim[0], 3))
+plt.imshow(ssim[1], cmap='gray')
+plt.colorbar(), plt.title('SSIM'), plt.axis('tight'), plt.axis('off'), plt.clim(0, 1)
+
+
+pt_id = random.randint(0, test_pred.shape[0]-1)
+slice_numb = random.randint(0, test_pred.shape[3]-1)
+grid = plt.GridSpec(2, 5, wspace=.15, hspace=.15)
+exec (f"plt.subplot(grid{[5]})")
+plt.imshow(test_t1[pt_id,:,:,slice_numb], cmap='gray')
+plt.colorbar(), plt.title('T1 image'), plt.axis('tight'), plt.axis('off')
+exec (f"plt.subplot(grid{[6]})")
+plt.imshow(test_real[pt_id,:,:,slice_numb], cmap='gray')
+plt.colorbar(), plt.title('T1ce image (real)'), plt.axis('tight'), plt.axis('off')
+exec (f"plt.subplot(grid{[7]})")
+plt.imshow(test_pred[pt_id,:,:,slice_numb], cmap='gray')
+plt.colorbar(), plt.title('T1ce image (pred)'), plt.axis('tight'), plt.axis('off')
+exec (f"plt.subplot(grid{[8]})")
+residual = test_real[pt_id,:,:,slice_numb] - test_pred[pt_id,:,:,slice_numb]
+plt.imshow(residual, cmap='gray')
+plt.colorbar(), plt.title('difference map'), plt.axis('tight'), plt.axis('off')
+exec (f"plt.subplot(grid{[9]})")
+ssim = structural_similarity(test_real[pt_id,:,:,slice_numb], test_pred[pt_id,:,:,slice_numb], data_range=1, full=True)
+print("SSIM val =", np.round(ssim[0], 3))
+plt.imshow(ssim[1], cmap='gray')
+plt.colorbar(), plt.title('SSIM'), plt.axis('tight'), plt.axis('off'), plt.clim(0, 1)
+plt.show()
+
+
+###############################################################################
+############################### THE END #######################################
+###############################################################################
