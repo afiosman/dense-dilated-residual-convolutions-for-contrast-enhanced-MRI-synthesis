@@ -1,7 +1,7 @@
 # Deep Learning for Contrast-Enhanced T1 MR Image Synthesis
 # @author: Alexander F.I. Osman, April 2023
 
-"""
+"""  
 PART II: TESTING THE MODEL PERFORMANCE
 
 This code demonstrates a 3D Dense-Dlated Res U-Net architecture for contrast-enhanced MR image
@@ -211,7 +211,6 @@ ssim = structural_similarity(test_real[pt_id,:,:,slice_numb], test_pred[pt_id,:,
 print("SSIM val =", np.round(ssim[0], 3))
 plt.imshow(ssim[1], cmap='gray')
 plt.colorbar(), plt.title('SSIM'), plt.axis('tight'), plt.axis('off'), plt.clim(0, 1)
-
 
 pt_id = random.randint(0, test_pred.shape[0]-1)
 slice_numb = random.randint(0, test_pred.shape[3]-1)
