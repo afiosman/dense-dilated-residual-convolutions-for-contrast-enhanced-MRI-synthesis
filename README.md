@@ -16,4 +16,4 @@ Fig. 2. Visual assessment of our proposed DD-Res U-Net model for contrast-enhanc
 The datasets generated during and/or analyzed during the current study are available at the RSNA-ASNR-MICCAI Brain Tumor Segmentation (BraTS) Challenge 2021 repository http://braintumorsegmentation.org/. 
 
 # Paper
-Please cite this paper: Osman AFI, Tamam NM. Contrast-enhanced MRI synthesis using dense-dilated residual convolutions based 3D network toward elimination of gadolinium in neuro-oncology. Journal of Applied Clinical Medical Physics Medical Physics 2023;1-8. https://doi.org/10.1002/acm2.14120 
+Please cite this paper: Osman AFI, Tamam NM. Contrast-enhanced MRI synthesis using dense-dilated residual convolutions based 3D network toward elimination of gadolinium in neuro-oncology. J Appl Clin Med Phys. 2023;e140120. https://doi.org/10.1002/acm2.14120 
